@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { parseEml, readEml } from "@vortiq/eml-parse-js";
+import { extractEmailData } from "../utility/parseEml";
 
 const FileUpload = () => {
   const [fileName, setFileName] = useState("");
@@ -10,22 +11,13 @@ const FileUpload = () => {
     if (!file) return;
     setFileName(file.name);
     const text = await file.text();
+  try {
+  const data = extractEmailData(text);
+  setEmailData(data); 
+ } catch (err) {
+  console.error("Parsing failed:", err);
+ }
 
-    try {
-      const parsed = parseEml(text);
-      const data = readEml(parsed);
-
-      setEmailData({
-          subject: data.subject || "(No Subject)",
-          from: data.from?.[0]?.email || "(Unknown Sender)",
-          to: data.to?.[0]?.email || "(Unknown Recipient)",
-          date: data.date || "(No Date)",
-          body: data.text || data.html || "(No Body Content)",
-    });
-
-    } catch (err) {
-      console.error("Parsing failed:", err);
-    }
   };
 
   return (
