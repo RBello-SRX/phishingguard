@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { parseEml, readEml } from "@vortiq/eml-parse-js";
 import { extractEmailData } from "../utility/parseEml";
+import EmailBody from "./EmailBody";
+
 
 const FileUpload = () => {
   const [fileName, setFileName] = useState("");
@@ -37,10 +39,7 @@ const FileUpload = () => {
           <p><strong>To:</strong> {emailData.to}</p>
           <p><strong>Date:</strong> {emailData.date ? new Date(emailData.date).toLocaleString() : "(No Date)"}</p>
           <hr className="my-2" />
-          <p><strong>Body:</strong></p>
-          <div className="bg-gray-100 p-2 rounded text-xs whitespace-pre-wrap">
-            {emailData.body}
-          </div>
+          <EmailBody body={emailData.body} />
         </div>
       )}
     </div>
