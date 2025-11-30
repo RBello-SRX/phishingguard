@@ -29,13 +29,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onHtmlExtracted }) => {
     const data = extractEmailData(text);           // existing parser
     setEmailData(data);
 
-    // NEW: Extract domains
-    const domains = extractDomains(data.htmlBody, data.body);
+    // Extract domains from HTML + text
+    const extracted = extractDomains(data.htmlBody, data.body);
 
-    console.log("Extracted domains:", domains);
+    console.log("Extracted domains:", extracted);
 
-    // Store in state if you want to display it later
-    setDomains(domains);
+    setDomains(extracted);
 
   } catch (err) {
     console.error("Parsing failed:", err);
@@ -71,7 +70,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onHtmlExtracted }) => {
 
           <hr className="my-2" />
 
-          <EmailBody body={emailData.body} />
+          <EmailBody body={emailData.body}/>
         </div>
       )}
     </div>

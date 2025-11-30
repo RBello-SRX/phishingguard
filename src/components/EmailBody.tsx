@@ -1,49 +1,35 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
-interface EmailBodyProps {
+interface Props {
   body: string;
+  htmlBody?: string;
 }
 
-const EmailBody: React.FC<EmailBodyProps> = ({ body }) => {
+const EmailBody = ({ body, htmlBody }: Props) => {
   const [showFull, setShowFull] = useState(false);
 
-  const preview = body.slice(0, 300); // first 300 chars
-
-  const isHtml = body.trim().startsWith("<");
+  const finalHtml = htmlBody || body;
 
   return (
-    <div className="mt-3">
-      <p className="font-semibold">Body:</p>
+    <div className="mt-2">
+      {/* Render HTML safely */}
+      <div
+        className="bg-gray-100 p-3 rounded text-sm prose max-w-none"
+        dangerouslySetInnerHTML={{
+          __html: showFull
+            ? finalHtml
+            : finalHtml.slice(0, 800) + (finalHtml.length > 800 ? "..." : "")
+        }}
+      />
 
-      {/* Preview Box */}
-      <div className="bg-gray-100 p-3 rounded text-xs whitespace-pre-wrap border">
-        {!showFull ? (
-          <>
-            {preview}
-            {body.length > 300 && (
-              <span className="text-blue-500"> ...</span>
-            )}
-          </>
-        ) : (
-          <div>
-            {isHtml ? (
-              <pre className="whitespace-pre-wrap">
-                {body}
-              </pre>
-            ) : (
-              body
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Toggle Button */}
-      <button
-        onClick={() => setShowFull(!showFull)}
-        className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-xs"
-      >
-        {showFull ? "Hide Full Content" : "View Full Content"}
-      </button>
+      {finalHtml.length > 800 && (
+        <button
+          className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm"
+          onClick={() => setShowFull(!showFull)}
+        >
+          {showFull ? "Hide" : "View Full Content"}
+        </button>
+      )}
     </div>
   );
 };
