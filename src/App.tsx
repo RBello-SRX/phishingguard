@@ -14,12 +14,19 @@ function App() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <main className="flex flex-col items-center justify-center px-4">
-        <FileUpload 
-   onHtmlExtracted={(html: string) => {
-    setEmailHtml(html);
+  <FileUpload
+    onDataExtracted={(data: any) => {
+    // data.htmlBody contains sanitized HTML
+    setEmailHtml(data.htmlBody || "");
+
+    // You can also store domains, urls, sender, etc
+    // setDomains(data.domains);
+    // setUrls(data.urls);
+
     setModalOpen(true);
   }}
 />
+
       </main>
     </div>
   );
