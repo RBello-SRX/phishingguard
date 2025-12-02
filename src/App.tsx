@@ -1,36 +1,16 @@
-import React from 'react';
-import logo from './logo.svg';
+import React from "react";
 import Navbar from "./components/Navbar";
-import FileUpload from "./components/FileUpload";
-import { useState } from "react";
-import EmailModal from "./components/EmailModal";
-
+import EmailValidator from "./components/EmailValidator";
 
 function App() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [emailHtml, setEmailHtml] = useState("");
-
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#03050a]">
       <Navbar />
-      <main className="flex flex-col items-center justify-center px-4">
-  <FileUpload
-    onDataExtracted={(data: any) => {
-    // data.htmlBody contains sanitized HTML
-    setEmailHtml(data.htmlBody || "");
-
-    // You can also store domains, urls, sender, etc
-    // setDomains(data.domains);
-    // setUrls(data.urls);
-
-    setModalOpen(true);
-  }}
-/>
-
+      <main className="py-8">
+        <EmailValidator />
       </main>
     </div>
   );
 }
 
 export default App;
-
