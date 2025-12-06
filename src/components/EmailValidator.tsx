@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import FileUpload from "./FileUpload";
 import EmailBody from "./EmailBody";
+import { analyzeHeuristics } from "../utility/emailHeuristics";
+
 
 /**
  * Cyber Dark Mode — Email Validator
@@ -43,14 +45,21 @@ const EmailValidator: React.FC = () => {
   const [aiRunning, setAiRunning] = useState(false);
   const [aiResult, setAiResult] = useState<any | null>(null);
 
-  // Called by FileUpload when it finishes parsing
-  const handleDataExtracted = (data: any) => {
-    setParsedData(data);
-    // switch to details so user sees parsed output
-    setActiveTab("details");
-    // clear previous AI result
-    setAiResult(null);
-  };
+// Called by FileUpload when it finishes parsing
+const handleDataExtracted = (data: any) => {
+  // 1) compute heuristics using the utility
+  const heuristics = analyzeHeuristics(data);
+
+  // 2) store the parsed data plus heuristics in one object
+  setParsedData({
+    ...data,
+    heuristics
+  });
+
+  // 3) UX: show the details tab and clear any prior AI results
+  setActiveTab("details");
+  setAiResult(null);
+};
 
   // Placeholder: simulate AI run (we will integrate actual AI later)
   const runAiAnalysis = async () => {
@@ -249,6 +258,29 @@ const EmailValidator: React.FC = () => {
                     )}
                   </div>
                 )}
+                {/* Heuristic Signals */}
+                {parsedData?.heuristics && (
+                  <div className="mt-6 p-4 rounded-lg border border-[#402020] bg-[#1a0e0e]">
+                  <p className="text-xs text-red-400 font-semibold mb-2">
+                 Detected Risk Signals
+                  </p>
+
+                  {parsedData.heuristics.riskSignals.length > 0 ? (
+                    <ul className="list-disc ml-5 space-y-1">
+                     {parsedData.heuristics.riskSignals.map((signal: string, i: number) => (
+                      <li key={i} className="text-sm text-red-300">
+                        {signal}
+                      </li>
+                     ))}
+                    </ul>
+                   ) : (
+                   <p className="text-sm text-slate-400">
+                   No obvious risk indicators found.
+                  </p>
+                   )}
+                  </div>
+                    )}
+
 
                 {activeTab === "ai" && (
                   <div className="space-y-4 text-slate-200">
