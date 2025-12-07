@@ -42,8 +42,39 @@ const TabBtn: React.FC<{
 const EmailValidator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"details" | "ai">("details");
   const [parsedData, setParsedData] = useState<any | null>(null);
+  const getRiskScore = () => {
+  if (!parsedData?.heuristics) return 0;
+
+  return parsedData.heuristics.riskSignals.length * 18;
+  };
   const [aiRunning, setAiRunning] = useState(false);
   const [aiResult, setAiResult] = useState<any | null>(null);
+  const buildAiPayload = () => {
+  if (!parsedData) return null;
+
+  return {
+    meta: {
+      subject: parsedData.subject,
+      from: parsedData.from,
+      to: parsedData.to,
+      date: parsedData.date
+    },
+
+    content: {
+      bodyPreview: parsedData.body?.slice(0, 1000),
+      urls: parsedData.urls || [],
+      domains: parsedData.domains || []
+    },
+
+    heuristics: parsedData.heuristics,
+
+    riskScore: getRiskScore(),
+
+    instruction:
+      "Analyze this email for phishing, spoofing, social engineering, and malware delivery techniques. Respond with verdict, reasoning, and confidence."
+  };
+};
+
 
 // Called by FileUpload when it finishes parsing
 const handleDataExtracted = (data: any) => {
@@ -306,57 +337,85 @@ const handleDataExtracted = (data: any) => {
                     </div>
 
                     {/* AI result area */}
-                    {!aiResult ? (
-                      <div className="p-6 rounded-lg border border-[#072b3a] bg-black/20">
-                        <p className="text-slate-400">
-                          No analysis yet. Run the AI to get insights.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="p-4 rounded-lg border border-[#073043] bg-black/10 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-slate-300 font-semibold">
-                              Verdict:{" "}
-                              <span className="text-cyan-300 ml-2">
-                                {aiResult.verdict}
-                              </span>
-                            </p>
-                            <p className="text-xs text-slate-400 mt-1">
-                              Score:{" "}
-                              <span className="font-mono text-cyan-300">
-                                {aiResult.score}/100
-                              </span>
-                            </p>
-                          </div>
+{!parsedData ? (
+  /* 1️⃣ No email uploaded */
+  <div className="p-6 rounded-lg border border-[#072b3a] bg-black/20">
+    <p className="text-slate-400">
+      Upload an email to enable AI analysis.
+    </p>
+  </div>
+) : !aiResult ? (
+  /* 2️⃣ AI NOT RUN YET → SHOW PROMPT PREVIEW */
+  <div className="p-4 rounded-lg border border-[#073043] bg-black/10 space-y-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-cyan-300">
+          AI Prompt Preview
+        </p>
+        <p className="text-xs text-slate-400">
+          This is the data that will be sent to the AI engine
+        </p>
+      </div>
 
-                          <div className="px-3 py-2 rounded-md bg-[#001e2b] border border-[#003b4f]">
-                            <p className="text-xs text-slate-400">Confidence</p>
-                            <p className="text-sm text-cyan-300 font-semibold">
-                              Medium
-                            </p>
-                          </div>
-                        </div>
+      <button
+        className="px-3 py-2 text-xs rounded-md bg-[#001e2b] border border-[#003b4f] text-cyan-300 hover:scale-105 transition"
+        onClick={runAiAnalysis}
+      >
+        Run AI
+      </button>
+    </div>
 
-                        <div>
-                          <p className="text-xs text-slate-400 mb-2">Highlights</p>
-                          <ul className="list-disc ml-5">
-                            {aiResult.highlights.map((h: string, i: number) => (
-                              <li key={i} className="text-slate-200">
-                                {h}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+    <pre className="max-h-[400px] overflow-auto rounded-lg bg-[#05070a] p-4 text-xs text-slate-200 border border-[#03202a]">
+{JSON.stringify(buildAiPayload(), null, 2)}
+    </pre>
+  </div>
+) : (
+  /* 3️⃣ AI RESULT */
+  <div className="p-4 rounded-lg border border-[#073043] bg-black/10 space-y-3">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-slate-300 font-semibold">
+          Verdict:
+          <span className="text-cyan-300 ml-2">
+            {aiResult.verdict}
+          </span>
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Score:
+          <span className="font-mono text-cyan-300 ml-1">
+            {aiResult.score}/100
+          </span>
+        </p>
+      </div>
 
-                        <div>
-                          <p className="text-xs text-slate-400 mb-2">Explanation</p>
-                          <p className="text-sm text-slate-200">
-                            {aiResult.explanation}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+      <div className="px-3 py-2 rounded-md bg-[#001e2b] border border-[#003b4f]">
+        <p className="text-xs text-slate-400">Confidence</p>
+        <p className="text-sm text-cyan-300 font-semibold">
+          Medium
+        </p>
+      </div>
+    </div>
+
+    <div>
+      <p className="text-xs text-slate-400 mb-2">Highlights</p>
+      <ul className="list-disc ml-5">
+        {aiResult.highlights.map((h: string, i: number) => (
+          <li key={i} className="text-slate-200">
+            {h}
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div>
+      <p className="text-xs text-slate-400 mb-2">Explanation</p>
+      <p className="text-sm text-slate-200">
+        {aiResult.explanation}
+      </p>
+    </div>
+  </div>
+                     )}
+
                   </div>
                 )}
               </div>
@@ -381,6 +440,29 @@ const handleDataExtracted = (data: any) => {
 
               <div className="p-4 rounded-xl border border-[#032f3e] bg-black/20">
                 <p className="text-xs text-slate-400">Status</p>
+                 {parsedData && (
+                 <div className="mt-4">
+                  <p className="text-xs text-slate-400 mb-1">Risk Score</p>
+                  <div className="w-full h-3 rounded-full bg-black/40 overflow-hidden">
+                  <div
+                   className={`h-full transition-all duration-500 ${
+                         getRiskScore() > 60
+                       ? "bg-red-500"
+                        : getRiskScore() > 30
+                       ? "bg-yellow-400"
+                        : "bg-green-400"
+                      }`}
+                      style={{
+                    width: `${Math.min(getRiskScore(), 100)}%`,
+                    }}
+                      />
+                   </div>
+                   <p className="text-xs text-slate-300 mt-1">
+                   {getRiskScore()}/100
+                   </p>
+                  </div>
+                      )}
+
                 <div className="mt-2">
                   <p className="text-sm text-slate-200">
                     Parsed:{" "}
