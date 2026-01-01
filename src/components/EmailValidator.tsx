@@ -39,32 +39,51 @@ const EmailValidator: React.FC = () => {
   const [aiRunning, setAiRunning] = useState(false);
   const [aiResult, setAiResult] = useState<any | null>(null);
 
+ 
+
+
   const getRiskScore = () => {
     if (!parsedData?.heuristics) return 0;
     return parsedData.heuristics.riskSignals.length * 18;
   };
 
-  const buildAiPayload = () => {
-    if (!parsedData) return null;
+const buildAiPayload = () => {
+  if (!parsedData) return null;
 
-    return {
-      meta: {
-        subject: parsedData.subject,
-        from: parsedData.from,
-        to: parsedData.to,
-        date: parsedData.date
-      },
-      content: {
-        bodyPreview: parsedData.body?.slice(0, 1000),
-        urls: parsedData.urls || [],
-        domains: parsedData.domains || []
-      },
-      heuristics: parsedData.heuristics,
-      riskScore: getRiskScore(),
-      instruction: "Analyze this email for phishing, spoofing, social engineering, and malware delivery techniques. Respond with verdict, reasoning, and confidence."
-    };
+  return {
+    meta: {
+      subject: parsedData.subject,
+      from: parsedData.from,
+      to: parsedData.to,
+      date: parsedData.date
+    },
+
+    content: {
+      bodyPreview: parsedData.body?.slice(0, 1000),
+      urls: parsedData.urls || [],
+      domains: parsedData.domains || []
+    },
+
+    heuristics: parsedData.heuristics,
+
+    riskScore: getRiskScore(),
+
+    // ⭐ THIS IS THE IMPORTANT PART
+    context: {
+      operatingMode: "trust-but-verify",
+      guidance: [
+        "Transactional, logistics, banking, and notification emails are often legitimate",
+        "Tracking domains, external links, and noreply addresses are common",
+        "Do not flag an email as malicious based on a single weak signal",
+        "Multiple strong indicators must be present to classify as phishing",
+        "If signals are normal for business communication, classify as low risk"
+      ]
+    },
+
+    instruction:
+      "Evaluate this email cautiously. Determine whether the behavior is consistent with legitimate business communication or malicious intent. Respond with verdict, risk reasoning, and confidence level. Prefer low-risk or informational verdicts unless clear malicious patterns exist."
   };
-
+};
   // Called by FileUpload when it finishes parsing
   const handleDataExtracted = (data: any) => {
     // 1) compute heuristics using the utility
@@ -81,40 +100,76 @@ const EmailValidator: React.FC = () => {
     setAiResult(null);
   };
 
-  // Placeholder: simulate AI run (we will integrate actual AI later)
-const runAiAnalysis = async () => {
+
+// Placeholder: simulate AI run (we will integrate actual AI later)
+ const runAiAnalysis = async () => {
   if (!parsedData) return;
 
   setAiRunning(true);
   setAiResult(null);
 
   try {
-    const response = await fetch("/api/analyze-email", {
+    const prompt = `
+You are a cybersecurity SOC analyst.
+
+Analyze the following email for phishing or malicious indicators.
+
+Return your response in JSON ONLY using this format:
+{
+  "verdict": "Safe | Suspicious | Malicious",
+  "score": number (0-100),
+  "highlights": string[],
+  "explanation": string
+}
+
+EMAIL DATA:
+Subject: ${parsedData.subject}
+From: ${parsedData.from}
+To: ${parsedData.to}
+
+Domains:
+${parsedData.domains?.join(", ") || "None"}
+
+Links:
+${parsedData.urls?.join(", ") || "None"}
+
+Body:
+${parsedData.body?.slice(0, 3000) || "No body"}
+`;
+
+    const res = await fetch("http://localhost:11434/api/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(buildAiPayload())
+      body: JSON.stringify({
+        model: "mistral",
+        prompt,
+        stream: false
+      })
     });
 
-    if (!response.ok) {
-      throw new Error("AI service failed");
+    const data = await res.json();
+
+    // Extract JSON safely from AI response
+    const text = data.response || "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      throw new Error("AI did not return valid JSON");
     }
 
-    const result = await response.json();
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    setAiResult(parsed);
+  } catch (err) {
+    console.error("AI analysis failed:", err);
 
     setAiResult({
-      verdict: result.verdict,
-      score: result.score,
-      highlights: result.highlights,
-      explanation: result.explanation
-    });
-  } catch (err) {
-    setAiResult({
-      verdict: "Analysis Failed",
+      verdict: "Error",
       score: 0,
-      highlights: ["Unable to analyze email"],
-      explanation: "AI service unreachable or returned invalid response."
+      highlights: ["AI analysis failed"],
+      explanation: "Unable to process the email using local AI."
     });
   } finally {
     setAiRunning(false);
